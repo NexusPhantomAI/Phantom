@@ -1,22 +1,22 @@
 {
   "name": "PHANTOM",
   "short_name": "PHANTOM",
-  "description": "Phantom OS - Personal Intelligence Layer",
+  "description": "Phantom OS",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#000000",
   "theme_color": "#000000",
-  "start_url": "./phantom-mode.html",
-  "scope": "./",
+  "start_url": "/Phantom/phantom-mode.html",
+  "scope": "/Phantom/",
   "icons": [
     {
-      "src": "./icon-192.png",
+      "src": "/Phantom/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "./icon-512.png",
+      "src": "/Phantom/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
