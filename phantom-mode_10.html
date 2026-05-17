@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<title>PHANTOM</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
+:root{--g:#00ff9f;--b:#00d4ff;--r:#ff2d55;--g3:rgba(0,255,159,0.04)}
+html,body{height:100%;overflow:hidden;background:#000}
+body{font-family:'Share Tech Mono',monospace;color:var(--g);display:flex;flex-direction:column;padding:max(env(safe-area-inset-top),20px) 20px max(env(safe-area-inset-bottom),20px);min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background:linear-gradient(var(--g3) 1px,transparent 1px),linear-gradient(90deg,var(--g3) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+.scanline{position:fixed;top:-40%;left:0;right:0;height:40%;background:linear-gradient(transparent,rgba(0,255,159,0.022),transparent);animation:scan 6s linear infinite;pointer-events:none;z-index:0}
+@keyframes scan{0%{top:-40%}100%{top:120%}}
+#boot{position:fixed;inset:0;background:#000;z-index:999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.8s}
+#bootLines{font-size:11px;letter-spacing:2px;line-height:2.2;text-align:left;min-width:240px}
+.boot-bar-wrap{width:240px;height:1px;background:rgba(0,255,159,0.2);margin-top:24px;overflow:hidden}
+.boot-bar-fill{height:100%;width:0%;background:var(--g);animation:bl 2.2s ease-out forwards}
+@keyframes bl{0%{width:0%}100%{width:100%}}
+#pin-screen{position:fixed;inset:0;background:#000;z-index:998;display:none;flex-direction:column;align-items:center;justify-content:space-between;padding:max(env(safe-area-inset-top),48px) 28px max(env(safe-area-inset-bottom),40px);transition:opacity 0.5s}
+.pin-top{display:flex;flex-direction:column;align-items:center;gap:14px}
+.pin-label{font-size:8px;letter-spacing:5px;opacity:0.3}
+.pin-title{font-size:26px;letter-spacing:10px;text-shadow:0 0 20px rgba(0,255,159,0.5)}
+.pin-dots{display:flex;gap:18px;margin-top:4px}
+.dot{width:13px;height:13px;border-radius:50%;border:1.5px solid rgba(0,255,159,0.3);transition:all 0.15s}
+.dot.filled{background:var(--g);border-color:var(--g);box-shadow:0 0 10px rgba(0,255,159,0.6)}
+.pin-status{font-size:9px;letter-spacing:3px;min-height:13px;color:rgba(0,255,159,0.4);transition:color 0.2s}
+.pin-status.err{color:var(--r)}.pin-status.ok{color:var(--g)}
+.numpad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%;max-width:260px}
+.num-btn{aspect-ratio:1;border-radius:50%;border:1.5px solid rgba(0,255,159,0.2);background:rgba(0,255,159,0.03);color:var(--g);font-family:'Share Tech Mono',monospace;font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.1s}
+.num-btn:active{background:rgba(0,255,159,0.1);border-color:rgba(0,255,159,0.7);box-shadow:0 0 18px rgba(0,255,159,0.2);transform:scale(0.93)}
+.num-btn.zero{grid-column:2}
+.num-btn.del{font-size:13px;border-color:transparent;background:transparent;opacity:0.4;grid-column:3}
+.num-btn.del:active{opacity:1;color:var(--r)}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-9px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(6px)}}
+.shake{animation:shake 0.4s ease}
+.hud-top,.hud-center,.hud-bottom{opacity:0;transition:opacity 0.4s}
+.hud-top{display:flex;justify-content:space-between;align-items:flex-start;width:100%;z-index:1;flex-shrink:0}
+.wx-block{display:flex;flex-direction:column;gap:2px}
+.wx-row{display:flex;align-items:center;gap:6px}
+.wx-icon{font-size:20px;line-height:1}
+.wx-temp{font-size:24px;line-height:1}
+.wx-city{font-size:7px;letter-spacing:3px;opacity:0.35;margin-top:1px}
+.wx-sub{font-size:7px;letter-spacing:2px;opacity:0.28}
+.status-right{display:flex;flex-direction:column;align-items:flex-end;gap:5px}
+.bat-row{display:flex;align-items:center;gap:5px}
+.bat-body{width:18px;height:9px;border:1.5px solid var(--g);border-radius:2px;position:relative;overflow:hidden;flex-shrink:0}
+.bat-nub{width:3px;height:4px;border-top:1.5px solid var(--g);border-right:1.5px solid var(--g);border-bottom:1.5px solid var(--g);border-radius:0 1px 1px 0;flex-shrink:0}
+.bat-fill-inner{position:absolute;top:1.5px;left:1.5px;bottom:1.5px;background:var(--g);border-radius:1px;transition:width 1s;width:0%}
+.bat-pct{font-size:12px;line-height:1}
+.bat-low .bat-body,.bat-low .bat-nub{border-color:var(--r)}
+.bat-low .bat-fill-inner{background:var(--r)}
+.bat-low .bat-pct{color:var(--r)}
+.tags{display:flex;gap:6px;align-items:center}
+.tag{font-size:7px;letter-spacing:2px;opacity:0.28;border:1px solid rgba(0,255,159,0.13);padding:2px 5px}
+.lock-btn{background:transparent;border:none;cursor:pointer;color:var(--g);opacity:0.28;transition:opacity 0.2s;padding:0;display:flex;align-items:center}
+.lock-btn:active{opacity:1}
+.hud-center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:1;width:100%}
+.clock{font-size:clamp(52px,16vw,68px);letter-spacing:-2px;line-height:1;text-shadow:0 0 28px rgba(0,255,159,0.55),0 0 55px rgba(0,255,159,0.18);animation:glitch 8s infinite}
+@keyframes glitch{0%,95%,100%{text-shadow:0 0 28px rgba(0,255,159,0.55),0 0 55px rgba(0,255,159,0.18)}96%{text-shadow:-2px 0 var(--r),2px 0 var(--b)}97%{text-shadow:2px 0 var(--r),-2px 0 var(--b)}98%{text-shadow:0 0 28px rgba(0,255,159,0.55),0 0 55px rgba(0,255,159,0.18)}}
+.date-line{font-size:10px;letter-spacing:4px;opacity:0.45;margin-top:10px}
+.typewriter{font-size:9px;letter-spacing:3px;color:var(--b);margin-top:14px;min-height:13px;opacity:0.7}
+.cursor{animation:blink 1s step-end infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.hud-bottom{width:100%;z-index:1;display:flex;flex-direction:column;gap:6px;flex-shrink:0}
+.lichess-btn{width:100%;background:transparent;border:none;color:rgba(0,255,159,0.35);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:5px 0;transition:color 0.2s}
+.lichess-btn:active{color:var(--g)}
+.lichess-arrow{transition:transform 0.3s;display:inline-block}
+.lichess-arrow.open{transform:rotate(180deg)}
+.lichess-panel{display:none;border:1px solid rgba(0,255,159,0.13);padding:10px 14px;animation:fadeIn 0.2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+.lichess-panel.visible{display:block}
+.lch-grid{display:flex;gap:16px;align-items:center}
+.lch-item{flex:1}
+.lch-label{font-size:7px;letter-spacing:2px;opacity:0.3;margin-bottom:3px}
+.lch-val{font-size:19px;line-height:1}
+.lch-games{font-size:8px;letter-spacing:2px;opacity:0.3;margin-left:auto;text-align:right}
+.ki-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.ki-line{width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(0,255,159,0.15),transparent)}
+.ki-btn{display:flex;align-items:center;gap:10px;background:transparent;border:none;color:var(--g);font-family:'Share Tech Mono',monospace;font-size:10px;letter-spacing:5px;cursor:pointer;padding:8px 20px;opacity:0.55;transition:opacity 0.2s}
+.ki-btn:active{opacity:1}
+.pulse{width:6px;height:6px;background:var(--g);border-radius:50%;box-shadow:0 0 8px var(--g);flex-shrink:0;animation:p 2s ease-in-out infinite}
+@keyframes p{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.2;transform:scale(0.6)}}
+.ki-hint{font-size:7px;letter-spacing:3px;opacity:0.18;color:var(--g)}
+
+/* REMINDER */
+.reminder-btn{
+  position:fixed;bottom:max(env(safe-area-inset-bottom),24px);right:20px;
+  width:40px;height:40px;border-radius:50%;
+  border:1.5px solid rgba(0,255,159,0.3);background:rgba(0,255,159,0.05);
+  color:var(--g);font-size:20px;cursor:pointer;z-index:10;
+  display:none;align-items:center;justify-content:center;
+  transition:all 0.2s;
+}
+.reminder-btn:active{background:rgba(0,255,159,0.15);border-color:var(--g)}
+.reminder-btn.visible{display:flex}
+
+/* MODAL OVERLAY */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:500;
+  display:none;align-items:flex-start;justify-content:center;
+  padding:max(env(safe-area-inset-top),40px) 20px 20px;
+  overflow-y:auto;
+}
+.modal-overlay.visible{display:flex}
+.modal-box{
+  width:100%;max-width:420px;background:#060606;
+  border:1px solid rgba(0,255,159,0.18);
+  padding:24px 22px 22px;
+  animation:fadeDown 0.22s ease;
+}
+@keyframes fadeDown{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+.modal-title{font-size:9px;letter-spacing:6px;opacity:0.35;margin-bottom:18px;padding-bottom:12px;border-bottom:1px solid rgba(0,255,159,0.08)}
+.modal-input{
+  width:100%;background:transparent;border:none;
+  border-bottom:1px solid rgba(0,255,159,0.18);
+  color:var(--g);font-family:'Share Tech Mono',monospace;
+  font-size:14px;letter-spacing:2px;padding:10px 0;
+  outline:none;margin-bottom:18px;
+}
+.modal-input::placeholder{color:rgba(0,255,159,0.18)}
+.modal-row{display:flex;gap:10px;margin-top:4px}
+.modal-btn{
+  flex:1;padding:13px;background:transparent;
+  border:1px solid rgba(0,255,159,0.2);
+  color:var(--g);font-family:'Share Tech Mono',monospace;
+  font-size:9px;letter-spacing:3px;cursor:pointer;transition:all 0.15s;
+}
+.modal-btn:active{background:rgba(0,255,159,0.08)}
+.modal-btn.primary{border-color:var(--g);color:#000;background:var(--g)}
+.modal-btn.primary:active{background:rgba(0,255,159,0.8)}
+
+/* DATETIME PICKER */
+.dt-pick-wrap{margin-bottom:18px;position:relative}
+.dt-pick-label{font-size:7px;letter-spacing:3px;opacity:0.3;margin-bottom:8px}
+.dt-pick-display{
+  width:100%;background:transparent;
+  border-bottom:1px solid rgba(0,255,159,0.18);
+  color:var(--g);font-family:'Share Tech Mono',monospace;
+  font-size:14px;letter-spacing:2px;padding:10px 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.dt-pick-display .placeholder{color:rgba(0,255,159,0.25);font-size:12px}
+.dt-pick-display .arrow{opacity:0.3;font-size:10px}
+.dt-real{
+  position:absolute;inset:0;opacity:0;cursor:pointer;
+  width:100%;height:100%;border:none;background:transparent;
+  -webkit-appearance:none;
+}
+
+.reminder-list{max-height:140px;overflow-y:auto;margin-bottom:16px}
+.reminder-item{
+  display:flex;align-items:center;
+  padding:9px 0;border-bottom:1px solid rgba(0,255,159,0.07);
+  font-size:10px;gap:8px;
+}
+.reminder-item .r-time{color:var(--b);letter-spacing:2px;flex-shrink:0;font-size:9px}
+.reminder-item .r-msg{opacity:0.65;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reminder-item .r-del{background:transparent;border:none;color:var(--r);opacity:0.45;cursor:pointer;font-size:13px;flex-shrink:0;padding:0 2px}
+.reminder-item .r-del:active{opacity:1}
+.no-reminders{font-size:8px;letter-spacing:3px;opacity:0.2;text-align:center;padding:14px 0}
+.no-reminders{font-size:9px;letter-spacing:3px;opacity:0.25;text-align:center;padding:12px 0}
+
+/* IN-APP ALERT */
+.alert-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:600;
+  display:none;align-items:center;justify-content:center;
+}
+.alert-overlay.visible{display:flex}
+.alert-box{
+  width:calc(100% - 48px);max-width:340px;
+  border:1px solid var(--g);background:#000;padding:28px 24px;
+  text-align:center;animation:alertPop 0.3s ease;
+}
+@keyframes alertPop{from{transform:scale(0.9);opacity:0}to{transform:scale(1);opacity:1}}
+.alert-time{font-size:10px;letter-spacing:4px;color:var(--b);margin-bottom:12px;opacity:0.6}
+.alert-msg{font-size:16px;letter-spacing:2px;margin-bottom:24px;line-height:1.5}
+.alert-done{
+  width:100%;padding:14px;background:var(--g);
+  border:none;color:#000;font-family:'Share Tech Mono',monospace;
+  font-size:12px;letter-spacing:5px;cursor:pointer;
+}
+.alert-done:active{background:rgba(0,255,159,0.8)}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div id="boot"><div id="bootLines"></div><div class="boot-bar-wrap"><div class="boot-bar-fill"></div></div></div>
+<div id="pin-screen">
+  <div class="pin-top">
+    <div class="pin-label">ZUGANG ERFORDERLICH</div>
+    <div class="pin-title">PHANTOM</div>
+    <div class="pin-dots"><div class="dot" id="d0"></div><div class="dot" id="d1"></div><div class="dot" id="d2"></div><div class="dot" id="d3"></div></div>
+    <div class="pin-status" id="pinStatus">CODE EINGEBEN</div>
+  </div>
+  <div class="numpad" id="numpad">
+    <button class="num-btn" onclick="pp('1')">1</button><button class="num-btn" onclick="pp('2')">2</button><button class="num-btn" onclick="pp('3')">3</button>
+    <button class="num-btn" onclick="pp('4')">4</button><button class="num-btn" onclick="pp('5')">5</button><button class="num-btn" onclick="pp('6')">6</button>
+    <button class="num-btn" onclick="pp('7')">7</button><button class="num-btn" onclick="pp('8')">8</button><button class="num-btn" onclick="pp('9')">9</button>
+    <button class="num-btn zero" onclick="pp('0')">0</button><button class="num-btn del" onclick="pd()">DEL</button>
+  </div>
+</div>
+
+<div class="hud-top">
+  <div class="wx-block">
+    <div class="wx-row"><span class="wx-icon" id="wIcon">·</span><span class="wx-temp" id="wTemp">··°</span></div>
+    <div class="wx-city" id="wCity">···</div>
+    <div class="wx-sub" id="wDesc">LÄDT</div>
+  </div>
+  <div class="status-right">
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="bat-row" id="batStat">
+        <div class="bat-body"><div class="bat-fill-inner" id="batFill"></div></div>
+        <div class="bat-nub"></div>
+        <span class="bat-pct" id="batVal">--%</span>
+      </div>
+      <button class="lock-btn" onclick="lockPhantom()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+      </button>
+    </div>
+    <div class="tags"><span class="tag">AKTIV</span><span class="tag" style="color:var(--b);border-color:rgba(0,212,255,0.13)">LLAMA</span></div>
+  </div>
+</div>
+
+<div class="hud-center">
+  <div class="clock" id="clock">00:00:00</div>
+  <div class="date-line" id="dateLine">--.--.----</div>
+  <div class="typewriter"><span id="tw"></span><span class="cursor">█</span></div>
+</div>
+
+<div class="hud-bottom">
+  <button class="lichess-btn" onclick="toggleLichess()">
+    <span>♟ LICHESS</span><span class="lichess-arrow" id="lchArrow">▾</span>
+  </button>
+  <div class="lichess-panel" id="lchPanel">
+    <div class="lch-grid">
+      <div class="lch-item"><div class="lch-label">BLITZ</div><div class="lch-val" id="chBlitz">···</div></div>
+      <div class="lch-item"><div class="lch-label">RAPID</div><div class="lch-val" id="chRapid">···</div></div>
+      <div class="lch-item"><div class="lch-label">PUZZLE</div><div class="lch-val" style="color:var(--b)" id="chPuzzle">···</div></div>
+      <div class="lch-games" id="chGames">···</div>
+    </div>
+  </div>
+  <div class="ki-wrap">
+    <div class="ki-line"></div>
+    <button class="ki-btn" onclick="openKI()"><div class="pulse"></div>PHANTOM KI</button>
+    <div class="ki-hint">LOKAL · PRIVAT · OFFLINE</div>
+  </div>
+</div>
+
+<!-- REMINDER BUTTON -->
+<button class="reminder-btn" id="reminderBtn" onclick="openReminderModal()">＋</button>
+
+<!-- REMINDER MODAL -->
+<div class="modal-overlay" id="reminderModal">
+  <div class="modal-box">
+    <div class="modal-title">ERINNERUNG HINZUFÜGEN</div>
+    <div class="reminder-list" id="reminderList"></div>
+
+    <div class="dt-pick-wrap">
+      <div class="dt-pick-label">DATUM</div>
+      <div class="dt-pick-display">
+        <span id="dateDisplay" class="placeholder">DATUM WÄHLEN</span>
+        <span class="arrow">▾</span>
+        <input class="dt-real" type="date" id="rDate" onchange="onDTChange()">
+      </div>
+    </div>
+
+    <div class="dt-pick-wrap">
+      <div class="dt-pick-label">UHRZEIT</div>
+      <div class="dt-pick-display">
+        <span id="timeDisplay" class="placeholder">UHRZEIT WÄHLEN</span>
+        <span class="arrow">▾</span>
+        <input class="dt-real" type="time" id="rTime" onchange="onDTChange()">
+      </div>
+    </div>
+
+    <input class="modal-input" type="text" id="rMsg" placeholder="Nachricht eingeben..." maxlength="60">
+    <div class="modal-row">
+      <button class="modal-btn" onclick="closeReminderModal()">ABBRECHEN</button>
+      <button class="modal-btn primary" onclick="addReminder()">SPEICHERN</button>
+    </div>
+  </div>
+</div>
+
+<!-- ALERT -->
+<div class="alert-overlay" id="alertOverlay">
+  <div class="alert-box">
+    <div class="alert-time" id="alertTime"></div>
+    <div class="alert-msg" id="alertMsg"></div>
+    <button class="alert-done" onclick="dismissAlert()">✓ ERLEDIGT</button>
+  </div>
+</div>
+
+<script>
+const CODE='0809';let entered='',locked=false;
+function pp(d){if(locked||entered.length>=4)return;entered+=d;dots();if(entered.length===4)setTimeout(check,120)}
+function pd(){if(locked)return;entered=entered.slice(0,-1);dots();setSt('CODE EINGEBEN','')}
+function dots(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<entered.length)}
+function setSt(t,c){const e=document.getElementById('pinStatus');e.textContent=t;e.className='pin-status'+(c?' '+c:'')}
+function check(){
+  if(entered===CODE){setSt('ZUGANG GEWÄHRT ✓','ok');locked=true;setTimeout(()=>{const p=document.getElementById('pin-screen');p.style.opacity='0';setTimeout(()=>{p.style.display='none';startMain()},500)},350)}
+  else{setSt('FALSCHER CODE','err');locked=true;document.getElementById('numpad').classList.add('shake');setTimeout(()=>{document.getElementById('numpad').classList.remove('shake');entered='';dots();setSt('ERNEUT VERSUCHEN','');locked=false},600)}
+}
+const BOOT=['> PHANTOM OS v1.0 ...','> HARDWARE-SCAN OK','> KI-KERN LÄDT...','> DATENSCHUTZ: AKTIV','> KEINE VERBINDUNG NÖTIG','> AUTHENTIFIZIERUNG ERFORDERLICH'];
+let bi=0;const bl=document.getElementById('bootLines');
+function boot(){if(bi<BOOT.length){bl.innerHTML+=BOOT[bi++]+'<br>';setTimeout(boot,380)}else setTimeout(()=>{document.getElementById('boot').style.opacity='0';setTimeout(()=>{document.getElementById('boot').style.display='none';document.getElementById('pin-screen').style.display='flex'},800)},500)}
+setTimeout(boot,150);
+const DAYS=['SONNTAG','MONTAG','DIENSTAG','MITTWOCH','DONNERSTAG','FREITAG','SAMSTAG'];
+const MONTHS=['JAN','FEB','MÄR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DEZ'];
+function pad(n){return String(n).padStart(2,'0')}
+function tick(){const n=new Date();document.getElementById('clock').textContent=`${pad(n.getHours())}:${pad(n.getMinutes())}:${pad(n.getSeconds())}`;document.getElementById('dateLine').textContent=`${DAYS[n.getDay()]}  ${pad(n.getDate())} ${MONTHS[n.getMonth()]} ${n.getFullYear()}`}
+function initBat(){if('getBattery' in navigator){navigator.getBattery().then(b=>{function upd(){const p=Math.round(b.level*100);document.getElementById('batVal').textContent=p+'%';document.getElementById('batFill').style.width=p+'%';document.getElementById('batStat').classList.toggle('bat-low',p<20)}upd();b.addEventListener('levelchange',upd)})}}
+const msgs=['ALLE SYSTEME NOMINAL','PRIVAT · SICHER · LOKAL','KI-ENGINE BEREIT','KEINE DATEN VERLASSEN GERÄT','BEREIT'];
+let mi=0,ci=0,fwd=true;
+function twAnim(){const el=document.getElementById('tw'),m=msgs[mi];if(fwd){el.textContent=m.slice(0,++ci);if(ci>=m.length){fwd=false;setTimeout(twAnim,2200);return}}else{el.textContent=m.slice(0,--ci);if(ci<=0){fwd=true;mi=(mi+1)%msgs.length}}setTimeout(twAnim,fwd?65:25)}
+function startMain(){
+  document.querySelectorAll('.hud-top,.hud-center,.hud-bottom').forEach(el=>el.style.opacity='1');
+  setInterval(tick,1000);tick();initBat();setTimeout(twAnim,400);fetchWeather();
+  document.getElementById('reminderBtn').classList.add('visible');
+  initReminders();
+}
+let lchLoaded=false;
+function toggleLichess(){const panel=document.getElementById('lchPanel');const arrow=document.getElementById('lchArrow');const open=panel.classList.toggle('visible');arrow.classList.toggle('open',open);if(open&&!lchLoaded){fetchLichess();lchLoaded=true}}
+async function fetchLichess(){try{const r=await fetch('https://lichess.org/api/user/ArjunGahe',{headers:{Accept:'application/json'}});const d=await r.json();const p=d.perfs||{};document.getElementById('chBlitz').textContent=p.blitz?.rating||'—';document.getElementById('chRapid').textContent=p.rapid?.rating||'—';document.getElementById('chPuzzle').textContent=p.puzzle?.rating||'—';document.getElementById('chGames').textContent=(d.count?.all||'—')+' spiele'}catch(e){['chBlitz','chRapid','chPuzzle'].forEach(id=>document.getElementById(id).textContent='–')}}
+const WX={0:'KLAR',1:'MEIST KLAR',2:'TEILW. BEWÖLKT',3:'BEDECKT',45:'NEBEL',48:'NEBEL',51:'NIESEL',53:'NIESEL',55:'NIESEL',61:'REGEN',63:'REGEN',65:'STARKER REGEN',71:'SCHNEE',73:'SCHNEE',75:'STARKER SCHNEE',80:'SCHAUER',81:'SCHAUER',82:'STARKE SCHAUER',95:'GEWITTER',96:'GEWITTER',99:'GEWITTER'};
+const WI={0:'☀️',1:'🌤️',2:'⛅',3:'☁️',45:'🌫️',48:'🌫️',51:'🌦️',53:'🌦️',55:'🌦️',61:'🌧️',63:'🌧️',65:'🌧️',71:'❄️',73:'❄️',75:'❄️',80:'🌧️',81:'🌧️',82:'⛈️',95:'⛈️',96:'⛈️',99:'⛈️'};
+async function fetchWeather(){const set=(c)=>{const code=c.weather_code;document.getElementById('wTemp').textContent=Math.round(c.temperature_2m)+'°';document.getElementById('wDesc').textContent=WX[code]||'—';document.getElementById('wIcon').textContent=WI[code]||'🌡️'};try{const pos=await new Promise((res,rej)=>navigator.geolocation.getCurrentPosition(res,rej,{timeout:5000}));const{latitude:lat,longitude:lon}=pos.coords;const r=await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`);const d=await r.json();set(d.current);const geo=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);const gd=await geo.json();document.getElementById('wCity').textContent=(gd.address?.city||gd.address?.town||'WIEN').toUpperCase()}catch(e){try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=48.2082&longitude=16.3738&current=temperature_2m,weather_code&timezone=auto');const d=await r.json();set(d.current);document.getElementById('wCity').textContent='WIEN'}catch(e2){document.getElementById('wDesc').textContent='OFFLINE'}}}
+function lockPhantom(){const p=document.getElementById('pin-screen');entered='';locked=false;dots();setSt('CODE EINGEBEN','');p.style.opacity='0';p.style.display='flex';setTimeout(()=>p.style.opacity='1',10)}
+function openKI(){const a=document.createElement('a');a.href='intent://open#Intent;package=com.pocketpalai.app;scheme=pocketpal;end';a.click();setTimeout(()=>{if(confirm('PocketPal öffnen?\nWenn nicht automatisch: starte PocketPal manuell.'))window.location.href='market://details?id=com.pocketpalai.app'},1200)}
+
+// REMINDERS
+let reminders=[];
+let activeAlertId=null;
+
+function initReminders(){
+  reminders=JSON.parse(localStorage.getItem('ph_reminders')||'[]');
+  requestNotificationPermission();
+  setInterval(checkReminders,30000);
+  checkReminders();
+}
+
+function requestNotificationPermission(){
+  if('Notification' in window&&Notification.permission==='default'){
+    Notification.requestPermission();
+  }
+}
+
+function saveReminders(){localStorage.setItem('ph_reminders',JSON.stringify(reminders))}
+
+function openReminderModal(){
+  renderReminderList();
+  const now=new Date();
+  now.setMinutes(now.getMinutes()+30);
+  const yyyy=now.getFullYear();
+  const mm=pad(now.getMonth()+1);
+  const dd=pad(now.getDate());
+  document.getElementById('rDate').value=`${yyyy}-${mm}-${dd}`;
+  document.getElementById('rTime').value=`${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  onDTChange();
+  document.getElementById('rMsg').value='';
+  document.getElementById('reminderModal').classList.add('visible');
+}
+
+function onDTChange(){
+  const dateVal=document.getElementById('rDate').value;
+  const timeVal=document.getElementById('rTime').value;
+  const DAYS=['SO','MO','DI','MI','DO','FR','SA'];
+  const MONTHS=['JAN','FEB','MÄR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DEZ'];
+  const dEl=document.getElementById('dateDisplay');
+  const tEl=document.getElementById('timeDisplay');
+  if(dateVal){
+    const d=new Date(dateVal+'T00:00:00');
+    dEl.textContent=`${DAYS[d.getDay()]} ${pad(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
+    dEl.className='';
+  } else {dEl.textContent='DATUM WÄHLEN';dEl.className='placeholder'}
+  if(timeVal){
+    tEl.textContent=timeVal;tEl.className='';
+  } else {tEl.textContent='UHRZEIT WÄHLEN';tEl.className='placeholder'}
+}
+function closeReminderModal(){document.getElementById('reminderModal').classList.remove('visible')}
+
+function addReminder(){
+  const dateVal=document.getElementById('rDate').value;
+  const timeVal=document.getElementById('rTime').value;
+  const m=document.getElementById('rMsg').value.trim();
+  if(!dateVal||!timeVal||!m)return;
+  const dt=`${dateVal}T${timeVal}`;
+  const d=new Date(dt);
+  const DAYS=['SO','MO','DI','MI','DO','FR','SA'];
+  const MONTHS=['JAN','FEB','MÄR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DEZ'];
+  const label=`${DAYS[d.getDay()]} ${pad(d.getDate())} ${MONTHS[d.getMonth()]}  ${timeVal}`;
+  reminders.push({id:Date.now(),datetime:dt,label,msg:m,done:false});
+  saveReminders();renderReminderList();
+  document.getElementById('rMsg').value='';
+}
+
+function deleteReminder(id){
+  reminders=reminders.filter(r=>r.id!==id);
+  saveReminders();
+  renderReminderList();
+}
+
+function renderReminderList(){
+  const el=document.getElementById('reminderList');
+  if(!reminders.length){el.innerHTML='<div class="no-reminders">KEINE ERINNERUNGEN</div>';return}
+  el.innerHTML=reminders.map(r=>`
+    <div class="reminder-item">
+      <span class="r-time">${r.label||r.time}</span>
+      <span class="r-msg">${r.msg}</span>
+      <button class="r-del" onclick="deleteReminder(${r.id})">✕</button>
+    </div>`).join('');
+}
+
+function checkReminders(){
+  const now=new Date();
+  reminders.forEach(r=>{
+    if(r.done||activeAlertId===r.id)return;
+    const target=new Date(r.datetime||`1970-01-01T${r.time}`);
+    const match=r.datetime
+      ?Math.abs(now-target)<60000&&now>=target
+      :`${pad(now.getHours())}:${pad(now.getMinutes())}`===r.time;
+    if(match){activeAlertId=r.id;triggerAlert(r)}
+  });
+}
+
+function triggerAlert(r){
+  document.getElementById('alertTime').textContent=r.label||r.time;
+  document.getElementById('alertMsg').textContent=r.msg;
+  document.getElementById('alertOverlay').classList.add('visible');
+  if('Notification' in window&&Notification.permission==='granted'){
+    new Notification('PHANTOM',{body:r.msg,tag:'phantom-reminder',requireInteraction:true});
+  }
+  if(navigator.vibrate)navigator.vibrate([300,100,300,100,300]);
+}
+
+function dismissAlert(){
+  document.getElementById('alertOverlay').classList.remove('visible');
+  reminders=reminders.map(r=>r.id===activeAlertId?{...r,done:true}:r);
+  reminders=reminders.filter(r=>!r.done);
+  saveReminders();
+  activeAlertId=null;
+}
+</script>
+</body>
+</html>
