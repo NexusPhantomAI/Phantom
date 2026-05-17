@@ -8,6 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#000000">
 <title>PHANTOM</title>
+<link rel="manifest" href="manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none}
@@ -138,18 +139,12 @@ body::before{content:'';position:fixed;inset:0;background:linear-gradient(var(--
 /* DATETIME PICKER */
 .dt-pick-wrap{margin-bottom:18px;position:relative}
 .dt-pick-label{font-size:7px;letter-spacing:3px;opacity:0.3;margin-bottom:8px}
-.dt-pick-display{
-  width:100%;background:transparent;
-  border-bottom:1px solid rgba(0,255,159,0.18);
+.dt-input{
+  width:100%;background:transparent;border:none;
+  border-bottom:1px solid rgba(0,255,159,0.2);
   color:var(--g);font-family:'Share Tech Mono',monospace;
-  font-size:14px;letter-spacing:2px;padding:10px 0;
-  display:flex;align-items:center;justify-content:space-between;
-}
-.dt-pick-display .placeholder{color:rgba(0,255,159,0.25);font-size:12px}
-.dt-pick-display .arrow{opacity:0.3;font-size:10px}
-.dt-real{
-  position:absolute;inset:0;opacity:0;cursor:pointer;
-  width:100%;height:100%;border:none;background:transparent;
+  font-size:15px;letter-spacing:2px;padding:10px 0;
+  outline:none;color-scheme:dark;
   -webkit-appearance:none;
 }
 
@@ -249,6 +244,9 @@ body::before{content:'';position:fixed;inset:0;background:linear-gradient(var(--
     <div class="ki-line"></div>
     <button class="ki-btn" onclick="openKI()"><div class="pulse"></div>PHANTOM KI</button>
     <div class="ki-hint">LOKAL · PRIVAT · OFFLINE</div>
+    <button id="installBtn" onclick="installApp()" style="display:none;margin-top:8px;background:transparent;border:1px solid rgba(0,255,159,0.4);color:var(--g);font-family:'Share Tech Mono',monospace;font-size:9px;letter-spacing:4px;padding:8px 20px;cursor:pointer;align-items:center;gap:8px">
+      ⬇ ALS APP INSTALLIEREN
+    </button>
   </div>
 </div>
 
@@ -263,20 +261,12 @@ body::before{content:'';position:fixed;inset:0;background:linear-gradient(var(--
 
     <div class="dt-pick-wrap">
       <div class="dt-pick-label">DATUM</div>
-      <div class="dt-pick-display">
-        <span id="dateDisplay" class="placeholder">DATUM WÄHLEN</span>
-        <span class="arrow">▾</span>
-        <input class="dt-real" type="date" id="rDate" onchange="onDTChange()">
-      </div>
+      <input class="dt-input" type="date" id="rDate" onchange="onDTChange()">
     </div>
 
     <div class="dt-pick-wrap">
-      <div class="dt-pick-label">UHRZEIT</div>
-      <div class="dt-pick-display">
-        <span id="timeDisplay" class="placeholder">UHRZEIT WÄHLEN</span>
-        <span class="arrow">▾</span>
-        <input class="dt-real" type="time" id="rTime" onchange="onDTChange()">
-      </div>
+      <div class="dt-pick-label">UHRZEIT DER BENACHRICHTIGUNG</div>
+      <input class="dt-input" type="time" id="rTime" onchange="onDTChange()">
     </div>
 
     <input class="modal-input" type="text" id="rMsg" placeholder="Nachricht eingeben..." maxlength="60">
@@ -297,13 +287,31 @@ body::before{content:'';position:fixed;inset:0;background:linear-gradient(var(--
 </div>
 
 <script>
-const CODE='0809';let entered='',locked=false;
+if('serviceWorker' in navigator){navigator.serviceWorker.register('./sw.js')}
+
+let installPrompt=null;
+window.addEventListener('beforeinstallprompt',(e)=>{
+  e.preventDefault();
+  installPrompt=e;
+  document.getElementById('installBtn').style.display='flex';
+});
+window.addEventListener('appinstalled',()=>{
+  document.getElementById('installBtn').style.display='none';
+});
+function installApp(){
+  if(installPrompt){installPrompt.prompt();installPrompt=null;}
+}
+
+const PIN_HASH='3bd62f7f9ccb2821f5330bd3a68629ed8b8a1a19370adf7d74636e76a698d430';
+let entered='',locked=false;
+async function hashPin(pin){const buf=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(pin));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('')}
 function pp(d){if(locked||entered.length>=4)return;entered+=d;dots();if(entered.length===4)setTimeout(check,120)}
 function pd(){if(locked)return;entered=entered.slice(0,-1);dots();setSt('CODE EINGEBEN','')}
 function dots(){for(let i=0;i<4;i++)document.getElementById('d'+i).classList.toggle('filled',i<entered.length)}
 function setSt(t,c){const e=document.getElementById('pinStatus');e.textContent=t;e.className='pin-status'+(c?' '+c:'')}
-function check(){
-  if(entered===CODE){setSt('ZUGANG GEWÄHRT ✓','ok');locked=true;setTimeout(()=>{const p=document.getElementById('pin-screen');p.style.opacity='0';setTimeout(()=>{p.style.display='none';startMain()},500)},350)}
+async function check(){
+  const h=await hashPin(entered);
+  if(h===PIN_HASH){setSt('ZUGANG GEWÄHRT ✓','ok');locked=true;setTimeout(()=>{const p=document.getElementById('pin-screen');p.style.opacity='0';setTimeout(()=>{p.style.display='none';startMain()},500)},350)}
   else{setSt('FALSCHER CODE','err');locked=true;document.getElementById('numpad').classList.add('shake');setTimeout(()=>{document.getElementById('numpad').classList.remove('shake');entered='';dots();setSt('ERNEUT VERSUCHEN','');locked=false},600)}
 }
 const BOOT=['> PHANTOM OS v1.0 ...','> HARDWARE-SCAN OK','> KI-KERN LÄDT...','> DATENSCHUTZ: AKTIV','> KEINE VERBINDUNG NÖTIG','> AUTHENTIFIZIERUNG ERFORDERLICH'];
@@ -366,22 +374,7 @@ function openReminderModal(){
   document.getElementById('reminderModal').classList.add('visible');
 }
 
-function onDTChange(){
-  const dateVal=document.getElementById('rDate').value;
-  const timeVal=document.getElementById('rTime').value;
-  const DAYS=['SO','MO','DI','MI','DO','FR','SA'];
-  const MONTHS=['JAN','FEB','MÄR','APR','MAI','JUN','JUL','AUG','SEP','OKT','NOV','DEZ'];
-  const dEl=document.getElementById('dateDisplay');
-  const tEl=document.getElementById('timeDisplay');
-  if(dateVal){
-    const d=new Date(dateVal+'T00:00:00');
-    dEl.textContent=`${DAYS[d.getDay()]} ${pad(d.getDate())} ${MONTHS[d.getMonth()]} ${d.getFullYear()}`;
-    dEl.className='';
-  } else {dEl.textContent='DATUM WÄHLEN';dEl.className='placeholder'}
-  if(timeVal){
-    tEl.textContent=timeVal;tEl.className='';
-  } else {tEl.textContent='UHRZEIT WÄHLEN';tEl.className='placeholder'}
-}
+function onDTChange(){}
 function closeReminderModal(){document.getElementById('reminderModal').classList.remove('visible')}
 
 function addReminder(){
